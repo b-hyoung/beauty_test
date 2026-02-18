@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { CheckCircle2, ChevronRight, ImagePlus, Loader2, Sparkles, UserRound } from 'lucide-react';
 import { gsap } from 'gsap';
 
-const PRICE_PER_USE_KRW = 1000;
+const PRICE_PER_USE_KRW = 990;
 
 const SIMULATION_TEMPLATES = [
   {

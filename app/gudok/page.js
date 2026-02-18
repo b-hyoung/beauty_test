@@ -3,6 +3,14 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
+const BUSINESS_PACKAGE_CREDITS = 11;
+const BUSINESS_PACKAGE_PRICE_KRW = 5500;
+const SINGLE_CREDIT_PRICE_KRW = 1000;
+
+function formatKrw(value) {
+  return `${Number(value || 0).toLocaleString('ko-KR')}원`;
+}
+
 const PLANS = [
   {
     id: 'free',
@@ -13,25 +21,22 @@ const PLANS = [
     creditsPerPurchase: 3,
     tone: 'from-slate-100 to-white',
     infoLevel: '기본 정보량',
-    details: [
-      '기본 피부 점수 + 핵심 요약',
-      '업로드/분석 기본 기능',
-      '빠른 셀프 체크용',
-    ],
+    details: ['기본 피부 점수 + 핵심 요약', '업로드/분석 기본 기능', '빠른 셀프 체크용'],
   },
   {
     id: 'business',
     name: 'Business',
     badge: 'Most Popular',
-    priceLabel: '$10',
+    priceLabel: `${BUSINESS_PACKAGE_CREDITS}회 ${formatKrw(BUSINESS_PACKAGE_PRICE_KRW)}`,
     purchaseEnabled: true,
-    creditsPerPurchase: 15,
+    creditsPerPurchase: BUSINESS_PACKAGE_CREDITS,
     tone: 'from-emerald-100 to-teal-50',
     infoLevel: '확장 정보량',
     details: [
       '개선 시뮬레이션 상세',
       '루틴/시술 추천 강화',
-      '1회 결제 시 15회 지급',
+      `패키지 구매: ${BUSINESS_PACKAGE_CREDITS}회 ${formatKrw(BUSINESS_PACKAGE_PRICE_KRW)}`,
+      `단일 구매: 1회 ${formatKrw(SINGLE_CREDIT_PRICE_KRW)}`,
       '우선 개선 항목 Top 3 제시',
       '항목별 근거 요약 제공',
       '실행 체크리스트 제공',
@@ -76,8 +81,6 @@ export default function GudokPage() {
   const [message, setMessage] = useState('');
 
   const active = useMemo(() => PLANS.find((p) => p.id === selectedPlan) || PLANS[0], [selectedPlan]);
-  const totalUsd = useMemo(() => 10, []);
-  const totalCredits = useMemo(() => active.creditsPerPurchase, [active.creditsPerPurchase]);
 
   function handleSelectPlan(planId) {
     setSelectedPlan(planId);
@@ -86,15 +89,17 @@ export default function GudokPage() {
     setMessage(`${plan?.name || planId} 플랜 선택 완료`);
   }
 
-  function handlePurchase() {
+  function handlePurchase(mode) {
     if (active.id !== 'business') {
       setMessage('현재 결제는 Business 플랜만 지원합니다.');
       return;
     }
-    const nextCredits = credits + totalCredits;
+    const purchaseCredits = mode === 'single' ? 1 : BUSINESS_PACKAGE_CREDITS;
+    const purchaseAmount = mode === 'single' ? SINGLE_CREDIT_PRICE_KRW : BUSINESS_PACKAGE_PRICE_KRW;
+    const nextCredits = credits + purchaseCredits;
     setCredits(nextCredits);
     localStorage.setItem('btest_credits', String(nextCredits));
-    setMessage(`${active.name} $${totalUsd} 결제 완료 (+${totalCredits}회). 현재 잔여 ${nextCredits}회`);
+    setMessage(`${active.name} 결제 완료 (${formatKrw(purchaseAmount)}, ${purchaseCredits}회). 현재 잔여 ${nextCredits}회`);
   }
 
   return (
@@ -108,7 +113,8 @@ export default function GudokPage() {
           Free / Business / Pro
         </h1>
         <p className="mt-3 max-w-3xl text-sm text-slate-600">
-          플랜이 올라갈수록 결과 설명과 해설이 더 길고 디테일해집니다. 가격은 달러 기준으로 표시됩니다.
+          플랜이 올라갈수록 결과 설명과 해설이 더 길고 디테일해집니다. Business는 패키지(11회 5,500원)와
+          단일 구매(1회 1,000원)를 함께 제공합니다.
         </p>
 
         <div className="mt-5 flex flex-wrap gap-2 text-xs">
@@ -154,7 +160,7 @@ export default function GudokPage() {
                 ) : null}
 
                 <p className="mt-3 text-xs font-semibold text-slate-600">
-                  {plan.purchaseEnabled ? `1회 결제 시 지급: ${plan.creditsPerPurchase}회` : '결제 오픈 준비중'}
+                  {plan.purchaseEnabled ? `패키지 ${BUSINESS_PACKAGE_CREDITS}회 / 단일 1회 구매 가능` : '결제 오픈 준비중'}
                 </p>
 
                 <button
@@ -174,41 +180,49 @@ export default function GudokPage() {
         </div>
 
         <section className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h3
-            className="text-2xl font-bold"
-            style={{ fontFamily: 'Georgia, Times New Roman, serif' }}
-          >
+          <h3 className="text-2xl font-bold" style={{ fontFamily: 'Georgia, Times New Roman, serif' }}>
             Checkout
           </h3>
           <p className="mt-1 text-sm text-slate-600">
             선택 플랜: <span className="font-bold">{active.name}</span>
-            {' '}| 결제 금액: <span className="font-bold">{active.id === 'business' ? '$10' : '준비중'}</span>
+            {' '}| 결제 방식: <span className="font-bold">{active.id === 'business' ? '패키지 / 단일' : '준비중'}</span>
           </p>
 
-            <div className="mt-3 rounded-2xl bg-slate-50 p-4 text-sm">
-              <p>
-                결제 금액: <span className="font-extrabold">{active.id === 'business' ? `$${totalUsd}` : '준비중'}</span>
-              </p>
-            <p className="mt-1">
-              획득 횟수: <span className="font-extrabold">{active.id === 'business' ? `${totalCredits}회` : '준비중'}</span>
-            </p>
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm">
+              <p className="font-bold text-emerald-900">Business 패키지</p>
+              <p className="mt-1 text-emerald-900/90">결제 금액: {formatKrw(BUSINESS_PACKAGE_PRICE_KRW)}</p>
+              <p className="text-emerald-900/90">획득 횟수: {BUSINESS_PACKAGE_CREDITS}회</p>
+              <button
+                type="button"
+                onClick={() => handlePurchase('package')}
+                disabled={active.id !== 'business'}
+                className="mt-3 w-full rounded-full bg-slate-900 px-4 py-2 text-sm font-bold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+              >
+                패키지 결제
+              </button>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm">
+              <p className="font-bold text-slate-900">단일 구매</p>
+              <p className="mt-1 text-slate-700">결제 금액: {formatKrw(SINGLE_CREDIT_PRICE_KRW)}</p>
+              <p className="text-slate-700">획득 횟수: 1회</p>
+              <button
+                type="button"
+                onClick={() => handlePurchase('single')}
+                disabled={active.id !== 'business'}
+                className="mt-3 w-full rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-800 hover:bg-slate-100 disabled:cursor-not-allowed disabled:bg-slate-200"
+              >
+                단일 결제
+              </button>
+            </div>
           </div>
-
-          <button
-            type="button"
-            onClick={handlePurchase}
-            disabled={active.id !== 'business'}
-            className="mt-4 rounded-full bg-slate-900 px-6 py-2.5 text-sm font-bold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
-          >
-            {active.id === 'business' ? '결제 진행' : '준비중'}
-          </button>
 
           {message ? <p className="mt-3 text-sm font-semibold text-emerald-700">{message}</p> : null}
         </section>
 
         <section className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           <h3 className="text-lg font-extrabold">리포트 정보량 차이</h3>
-          <div className="mt-3 grid gap-3 md:grid-cols-3 text-sm">
+          <div className="mt-3 grid gap-3 text-sm md:grid-cols-3">
             <div className="rounded-2xl bg-slate-50 p-4">
               <p className="font-bold">Free</p>
               <p className="mt-1 text-slate-600">핵심 점수와 짧은 요약 중심</p>
@@ -243,7 +257,8 @@ export default function GudokPage() {
             <p>- 실행 체크리스트</p>
             <p>- 주간 점검 포인트</p>
             <p>- 확장된 결과 설명 문장</p>
-            <p>- 1회 결제 시 15회 지급</p>
+            <p>- 패키지: 11회 5,500원</p>
+            <p>- 단일: 1회 1,000원</p>
           </div>
         </section>
       </section>
