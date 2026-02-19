@@ -552,6 +552,59 @@ function buildProductRecommendationMock(analysis, tabId) {
   };
 }
 
+function pickTimelinePoint(timeline, week) {
+  if (!Array.isArray(timeline) || timeline.length === 0) {
+    return { phase: `${week}주`, expectation: '루틴 정착과 컨디션 안정화', focus: '자극 최소화 + 보습 유지' };
+  }
+  const blockSize = 8 / timeline.length;
+  const index = Math.min(timeline.length - 1, Math.floor((week - 1) / blockSize));
+  return timeline[index];
+}
+
+function buildWeekFilter(tabId, week) {
+  const p = week / 8;
+  if (tabId === 'acne') {
+    return `contrast(${(1 + p * 0.05).toFixed(2)}) saturate(${(1 - p * 0.18).toFixed(2)}) brightness(${(
+      1 +
+      p * 0.07
+    ).toFixed(2)})`;
+  }
+  if (tabId === 'darkCircle') {
+    return `contrast(${(1 + p * 0.03).toFixed(2)}) brightness(${(1 + p * 0.09).toFixed(2)}) saturate(${(
+      1 -
+      p * 0.06
+    ).toFixed(2)})`;
+  }
+  return `contrast(${(1 + p * 0.06).toFixed(2)}) brightness(${(1 + p * 0.05).toFixed(2)}) saturate(${(
+    1 -
+    p * 0.04
+  ).toFixed(2)})`;
+}
+
+function buildWeeklyAfterFrames(tabId, timeline) {
+  const weekSteps = [1, 2, 4, 6, 8];
+  const byTab = {
+    acne: { label: '트러블/붉은기', min: 3, max: 24 },
+    darkCircle: { label: '눈가 음영', min: 2, max: 18 },
+    texture: { label: '피부결/모공', min: 3, max: 22 },
+  };
+  const selected = byTab[tabId] || byTab.texture;
+  return weekSteps.map((week) => {
+    const point = pickTimelinePoint(timeline, week);
+    const progress = week / 8;
+    const improvement = Math.round(selected.min + (selected.max - selected.min) * Math.pow(progress, 0.92));
+    return {
+      week,
+      title: `${week}주 후`,
+      improvement,
+      metricLabel: selected.label,
+      expectation: point?.expectation || '변화 경과 확인',
+      focus: point?.focus || '루틴 유지',
+      filter: buildWeekFilter(tabId, week),
+    };
+  });
+}
+
 export default function BTestFlowPage() {
   const [step, setStep] = useState(1);
   const [selectedTab, setSelectedTab] = useState('acne');
@@ -567,6 +620,7 @@ export default function BTestFlowPage() {
   const [afterPreviewUrl, setAfterPreviewUrl] = useState('');
   const [afterGenerating, setAfterGenerating] = useState(false);
   const [afterError, setAfterError] = useState('');
+  const [afterWeek, setAfterWeek] = useState(1);
   const [error, setError] = useState('');
   const [survey, setSurvey] = useState({
     age_band: '20s',
@@ -635,6 +689,14 @@ export default function BTestFlowPage() {
     if (!notes.length) return '가격은 병원/지역/패키지 구성에 따라 달라질 수 있습니다.';
     return Array.from(new Set(notes)).join(' / ');
   }, [simulationMock.procedureRecommendations]);
+  const weeklyAfterFrames = useMemo(
+    () => buildWeeklyAfterFrames(selectedTab, simulationMock.timeline),
+    [selectedTab, simulationMock.timeline]
+  );
+  const activeAfterFrame = useMemo(() => {
+    if (!weeklyAfterFrames.length) return null;
+    return weeklyAfterFrames.find((frame) => frame.week === afterWeek) || weeklyAfterFrames[0];
+  }, [afterWeek, weeklyAfterFrames]);
 
   const scoreGroups = useMemo(() => {
     if (!analysis) return [];
@@ -779,6 +841,10 @@ export default function BTestFlowPage() {
       setSelectedTab(simulationTabs[0].id);
     }
   }, [simulationTabs, selectedTab]);
+
+  useEffect(() => {
+    setAfterWeek(weeklyAfterFrames[0]?.week || 1);
+  }, [selectedTab, previewUrl, weeklyAfterFrames]);
 
   useEffect(() => {
     if (analysis && simulationTabs.length) {
@@ -1450,12 +1516,49 @@ export default function BTestFlowPage() {
                 </div>
                 <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
                   <p className="border-b border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600">
-                    애프터 (AI 개선 이미지)
+                    애프터 (1주~8주 예상 변화)
                   </p>
                   <div className="relative grid aspect-[3/4] place-items-center overflow-hidden bg-slate-100">
-                    <p className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
-                      준비중입니다
+                    {previewUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        key={activeAfterFrame?.week || 0}
+                        src={previewUrl}
+                        alt={activeAfterFrame ? `${activeAfterFrame.title} 예상 변화` : '애프터 예상 변화'}
+                        className="h-full w-full object-cover transition-all duration-700 ease-out"
+                        style={{ filter: activeAfterFrame?.filter || 'none' }}
+                      />
+                    ) : (
+                      <UserRound className="h-10 w-10 text-slate-400" />
+                    )}
+                    {activeAfterFrame ? (
+                      <p className="absolute left-3 top-3 rounded-full bg-black/70 px-2.5 py-1 text-[11px] font-bold text-white">
+                        {activeAfterFrame.title}
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="space-y-2 border-t border-slate-200 bg-white px-3 py-3">
+                    <p className="text-xs font-semibold text-slate-700">
+                      {activeAfterFrame?.metricLabel || '개선 지표'} 개선 예상: +{activeAfterFrame?.improvement || 0}%
                     </p>
+                    <p className="text-xs text-slate-600">{activeAfterFrame?.expectation || '주차별 변화를 계산 중입니다.'}</p>
+                    <p className="text-[11px] text-slate-500">포커스: {activeAfterFrame?.focus || '-'}</p>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {weeklyAfterFrames.map((frame) => (
+                        <button
+                          key={frame.week}
+                          type="button"
+                          onClick={() => setAfterWeek(frame.week)}
+                          className={`rounded-full px-2 py-1 text-[11px] font-semibold transition ${
+                            afterWeek === frame.week
+                              ? 'bg-slate-900 text-white'
+                              : 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
+                          }`}
+                        >
+                          {frame.week}주
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
