@@ -20,8 +20,8 @@ const PLANS = [
     purchaseEnabled: false,
     creditsPerPurchase: 3,
     tone: 'from-slate-100 to-white',
-    infoLevel: '기본 정보량',
-    details: ['기본 피부 점수 + 핵심 요약', '업로드/분석 기본 기능', '빠른 셀프 체크용'],
+    infoLevel: '운영 비중 낮음',
+    details: ['현재 핵심 운영 플랜은 Business입니다.'],
   },
   {
     id: 'business',
@@ -31,17 +31,19 @@ const PLANS = [
     purchaseEnabled: true,
     creditsPerPurchase: BUSINESS_PACKAGE_CREDITS,
     tone: 'from-emerald-100 to-teal-50',
-    infoLevel: '확장 정보량',
+    infoLevel: '현재 제공 기능 전체 이용',
     details: [
-      '개선 시뮬레이션 상세',
-      '루틴/시술 추천 강화',
+      '사진 업로드 + 자동 사전검사',
+      '핵심 지표 점수 + 항목별 근거 제공',
+      '우선 개선 항목 Top 3 제시',
+      'Before/After 주차별 변화(1/2/4/6/8주)',
+      '추천 홈케어 루틴/성분/실행 포인트',
+      '추천 시술 정보 + 가격 가이드',
+      '결과 설명 문장 확장',
       `패키지 구매: ${BUSINESS_PACKAGE_CREDITS}회 ${formatKrw(BUSINESS_PACKAGE_PRICE_KRW)}`,
       `단일 구매: 1회 ${formatKrw(SINGLE_CREDIT_PRICE_KRW)}`,
-      '우선 개선 항목 Top 3 제시',
-      '항목별 근거 요약 제공',
-      '실행 체크리스트 제공',
-      '주간 점검 포인트 제안',
-      '결과 설명 문장 확장',
+      '이메일 기반 간편 시작',
+      '사진 저장 없이 분석 후 삭제',
     ],
   },
   {
@@ -52,15 +54,8 @@ const PLANS = [
     purchaseEnabled: false,
     creditsPerPurchase: 30,
     tone: 'from-amber-100 to-orange-50',
-    infoLevel: '최대 정보량',
-    details: [
-      '고급 리포트 모드',
-      '항목별 근거/우선순위/가이드 상세',
-      '리포트 설명 밀도 최상 (월 30회)',
-      '월간 변화 추적 리포트',
-      '항목별 Before/After 비교 리포트',
-      '맞춤 액션 플랜 자동 생성',
-    ],
+    infoLevel: '차후 고도화 예정',
+    details: ['고도화 리포트/고급 분석 기능은 Pro에서 순차 오픈 예정입니다.'],
   },
 ];
 
@@ -75,8 +70,8 @@ export default function GudokPage() {
     return Number.isFinite(stored) && stored > 0 ? Math.floor(stored) : 0;
   });
   const [selectedPlan, setSelectedPlan] = useState(() => {
-    if (typeof window === 'undefined') return 'free';
-    return localStorage.getItem('btest_plan') || 'free';
+    if (typeof window === 'undefined') return 'business';
+    return localStorage.getItem('btest_plan') || 'business';
   });
   const [message, setMessage] = useState('');
 
@@ -110,7 +105,7 @@ export default function GudokPage() {
           className="mt-2 text-4xl font-bold leading-tight md:text-5xl"
           style={{ fontFamily: 'Garamond, Baskerville, Times New Roman, serif' }}
         >
-          Free / Business / Pro
+          Business / Pro
         </h1>
         <p className="mt-3 max-w-3xl text-sm text-slate-600">
           플랜이 올라갈수록 결과 설명과 해설이 더 길고 디테일해집니다. Business는 패키지(11회 5,500원)와
@@ -149,16 +144,6 @@ export default function GudokPage() {
                     <li key={d}>- {d}</li>
                   ))}
                 </ul>
-                {plan.id === 'pro' ? (
-                  <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
-                    <p className="font-bold">리포트 예시</p>
-                    <p className="mt-1">
-                      예) &quot;홍조 점수는 58/100으로 볼 중앙 혈색 편차가 관찰됩니다. 1순위는 진정 루틴,
-                      2순위는 수분장벽 강화이며 2주 후 재분석을 권장합니다.&quot;
-                    </p>
-                  </div>
-                ) : null}
-
                 <p className="mt-3 text-xs font-semibold text-slate-600">
                   {plan.purchaseEnabled ? `패키지 ${BUSINESS_PACKAGE_CREDITS}회 / 단일 1회 구매 가능` : '결제 오픈 준비중'}
                 </p>
@@ -233,7 +218,7 @@ export default function GudokPage() {
             </div>
             <div className="rounded-2xl bg-amber-50 p-4">
               <p className="font-bold text-amber-900">Pro</p>
-              <p className="mt-1 text-amber-900/80">근거, 우선순위, 가이드까지 가장 상세</p>
+              <p className="mt-1 text-amber-900/80">고도화 기능 차후 오픈 예정</p>
             </div>
           </div>
 
@@ -259,6 +244,7 @@ export default function GudokPage() {
             <p>- 확장된 결과 설명 문장</p>
             <p>- 패키지: 11회 5,500원</p>
             <p>- 단일: 1회 1,000원</p>
+            <p>- 이메일 결과 전달 + 사진 저장 안 함</p>
           </div>
         </section>
       </section>
